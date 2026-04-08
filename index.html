@@ -255,6 +255,7 @@
   <button class="etab" onclick="setEnc('@1',this)">.1 Enchanté</button>
   <button class="etab" onclick="setEnc('@2',this)">.2 Rare</button>
   <button class="etab" onclick="setEnc('@3',this)">.3 Exceptionnel</button>
+  <button class="etab" onclick="setEnc('@4',this)">.4 Pristine</button>
 </div>
 
 <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
@@ -341,10 +342,10 @@ const ITEMS = [
   {id:'T8_SHOES_LEATHER_SET3', name:"Chaussures d'assassin",  type:'shoes', tier:'T8', mat:'T8_LEATHER'},
 ];
 
-const MAT_QTY   = 8; // toujours 8 pour casques et chaussures
-const ENC_LABEL = {'':'Normal','@1':'Enchanté','@2':'Rare','@3':'Exceptionnel'};
-const ENC_DOT   = {'':'.0','@1':'.1','@2':'.2','@3':'.3'};
-const ENCS      = ['','@1','@2','@3'];
+const MAT_QTY   = 8;
+const ENC_LABEL = {'':'Normal','@1':'Enchanté','@2':'Rare','@3':'Exceptionnel','@4':'Pristine'};
+const ENC_DOT   = {'':'.0','@1':'.1','@2':'.2','@3':'.3','@4':'.4'};
+const ENCS      = ['','@1','@2','@3','@4'];
 const TAX       = 0.025;
 
 // ── VILLE ────────────────────────────────────────────────────────
@@ -431,14 +432,15 @@ function recompute(r) {
 const manualMat = {};
 
 const MAT_TIERS = ['T4','T5','T6','T7','T8'];
-const MAT_ENCS  = ['', '@1', '@2', '@3'];
-const MAT_ENC_LABELS = {'':'.0 Normal', '@1':'.1 Enchanté', '@2':'.2 Rare', '@3':'.3 Exceptionnel'};
+const MAT_ENCS  = ['', '@1', '@2', '@3', '@4'];
+const MAT_ENC_LABELS = {'':'.0 Normal', '@1':'.1 Enchanté', '@2':'.2 Rare', '@3':'.3 Exceptionnel', '@4':'.4 Pristine'};
 
 function matKey(tier, enc) {
   if (enc === '')   return tier + '_LEATHER';
   if (enc === '@1') return tier + '_LEATHER_LEVEL1@1';
   if (enc === '@2') return tier + '_LEATHER_LEVEL2@2';
   if (enc === '@3') return tier + '_LEATHER_LEVEL3@3';
+  if (enc === '@4') return tier + '_LEATHER_LEVEL4@4';
   return tier + '_LEATHER';
 }
 
@@ -697,6 +699,7 @@ async function loadAll() {
     matIds.push(t+'_LEATHER_LEVEL1@1');
     matIds.push(t+'_LEATHER_LEVEL2@2');
     matIds.push(t+'_LEATHER_LEVEL3@3');
+    matIds.push(t+'_LEATHER_LEVEL4@4');
   }
   const matMap = await apiFetch(matIds);
   apiMatMap = matMap; // stocker pour les inputs
