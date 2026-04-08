@@ -611,12 +611,24 @@ function onManual(fullId, val, inputEl) {
 }
 
 // ── CELL HTML HELPERS ────────────────────────────────────────────
+function activityHTML(r) {
+  const n = r.activity || 0;
+  if (n === 0) return `<span style="font-family:var(--fm);font-size:10px;color:var(--text3)" title="Aucune vente détectée sur 7j">⬤ Inconnu</span>`;
+  if (n < 5)   return `<span style="font-family:var(--fm);font-size:10px;color:var(--red)" title="${n} ventes sur 7j">⬤ Mort (${n}/7j)</span>`;
+  if (n < 30)  return `<span style="font-family:var(--fm);font-size:10px;color:var(--gold)" title="${n} ventes sur 7j">⬤ Lent (${n}/7j)</span>`;
+  if (n < 100) return `<span style="font-family:var(--fm);font-size:10px;color:var(--accent)" title="${n} ventes sur 7j">⬤ Actif (${n}/7j)</span>`;
+  return `<span style="font-family:var(--fm);font-size:10px;color:#5aabcc" title="${n} ventes sur 7j">⬤ Très actif (${n}/7j)</span>`;
+}
+
 function apiLineHTML(r) {
-  const has = !!manual[r.fullId];
-  const city = r.apiCity && r.apiCity !== 'Lymhurst' ? ` <small style="color:var(--gold);font-size:9px">(${r.apiCity})</small>` : '';
-  if (r.apiSell > 0 && !has) return `<span class="sell-api-line">${fmt(r.apiSell)} <small style="color:var(--text3)">s</small>${city}</span>`;
-  if (r.apiSell > 0 &&  has) return `<span class="sell-api-struck">${fmt(r.apiSell)} s (API)${city}</span>`;
-  return `<span class="sell-api-none">— pas de prix API</span>`;
+  const has  = !!manual[r.fullId];
+  const city = r.apiCity && r.apiCity !== currentCity()
+    ? ` <small style="color:var(--gold);font-size:9px">(${r.apiCity})</small>` : '';
+  let priceLine;
+  if (r.apiSell > 0 && !has) priceLine = `<span class="sell-api-line">${fmt(r.apiSell)} <small style="color:var(--text3)">s</small>${city}</span>`;
+  else if (r.apiSell > 0)    priceLine = `<span class="sell-api-struck">${fmt(r.apiSell)} s (API)${city}</span>`;
+  else                       priceLine = `<span class="sell-api-none">— pas de prix API</span>`;
+  return `${priceLine}<div style="margin-top:3px">${activityHTML(r)}</div>`;
 }
 
 function matCellHTML(r) {
@@ -718,6 +730,29 @@ async function loadAll() {
     setStatus('loading', `Chargement... ${Math.min(pct,90)}%`);
   }
   setBar(95);
+  setStatus('loading', 'Chargement de l\'activité...');
+
+  // Fetch historique 7 jours pour calculer l'activité
+  const HIST_API = 'https://europe.albion-online-data.com/api/v2/stats/history';
+  const actMap = {};
+  for (let i = 0; i < itemIds.length; i += CHUNK) {
+    const chunk = itemIds.slice(i, i+CHUNK);
+    const url = `${HIST_API}/${chunk.join(',')}.json?locations=${encodeURIComponent(currentCity())}&time-scale=24`;
+    try {
+      const r = await fetch(url);
+      if (r.ok) {
+        const d = await r.json();
+        for (const x of d) {
+          if (!x.data || !x.data.length) continue;
+          // Sommer les item_count sur les 7 derniers jours
+          const last7 = x.data.slice(-7);
+          const total = last7.reduce((s, e) => s + (e.item_count || 0), 0);
+          const key = x.item_id + '_' + x.location;
+          actMap[x.item_id] = (actMap[x.item_id] || 0) + total;
+        }
+      }
+    } catch(e) {}
+  }
 
   // Construire les lignes
   for (const item of ITEMS) {
@@ -732,6 +767,7 @@ async function loadAll() {
         tier: item.tier, tierNum: parseInt(item.tier.replace('T','')),
         enc, encDot: ENC_DOT[enc], encLabel: ENC_LABEL[enc],
         apiSell, apiCity, matPrice,
+        activity: actMap[fullId] || 0,
         matCost: 0, rrrSave: 0, profit: null, margin: null
       };
       recompute(row);
